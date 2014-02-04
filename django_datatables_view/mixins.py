@@ -1,5 +1,8 @@
 import json
+<<<<<<< HEAD
 
+=======
+>>>>>>> Fix for Django 1.5. Removed simplejson in favor of json.
 from django.core.serializers.json import DjangoJSONEncoder
 from django.http import HttpResponse
 from django.utils.encoding import force_unicode
