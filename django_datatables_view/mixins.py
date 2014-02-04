@@ -1,6 +1,6 @@
+import json
 from django.core.serializers.json import DjangoJSONEncoder
 from django.http import HttpResponse
-from django.utils import simplejson
 from django.utils.encoding import force_unicode
 from django.utils.functional import Promise
 from django.utils.cache import add_never_cache_headers
@@ -52,8 +52,8 @@ class JSONResponseMixin(object):
         else:
             response = func_val
 
-        json = simplejson.dumps(response, cls=LazyEncoder)
-        return self.render_to_response(json)
+        json_obj = json.dumps(response, cls=LazyEncoder)
+        return self.render_to_response(json_obj)
 
 
 class JSONResponseView(JSONResponseMixin, TemplateView):
