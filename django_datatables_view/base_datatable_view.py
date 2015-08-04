@@ -16,10 +16,8 @@ class BaseDatatableView(JSONResponseView):
         """
         return self.order_columns
 
-    def ordering(self, qs):
-        """ Get parameters from the request and prepare order by clause
-        """
-        request = self.request
+    @staticmethod
+    def build_order_by(request, order_columns):
         # Number of columns that are used in sorting
         try:
             i_sorting_cols = int(request.REQUEST.get('iSortingCols', 0))
@@ -27,7 +25,6 @@ class BaseDatatableView(JSONResponseView):
             i_sorting_cols = 0
 
         order = []
-        order_columns = self.get_order_columns()
         for i in range(i_sorting_cols):
             # sorting column
             try:
@@ -39,25 +36,39 @@ class BaseDatatableView(JSONResponseView):
 
             sdir = '-' if s_sort_dir == 'desc' else ''
 
-            sortcol = order_columns[i_sort_col]
+            try:
+                sortcol = order_columns[i_sort_col]
+            except IndexError:
+                continue
             if isinstance(sortcol, list):
                 for sc in sortcol:
-                    order.append('%s%s' % (sdir, sc))
+                    order.append((sdir, sc))
             else:
-                order.append('%s%s' % (sdir, sortcol))
+                order.append((sdir, sortcol))
+        return order
+
+    def ordering(self, qs):
+        """ Get parameters from the request and prepare order by clause
+        """
+        order = self.build_order_by(self.request, self.get_order_columns())
         if order:
-            return qs.order_by(*order)
+            return qs.order_by(*[''.join(order_by) for order_by in order])
         return qs
+
+    @staticmethod
+    def build_paging(request, max_length):
+        limit = min(int(request.REQUEST.get('iDisplayLength', 10)), max_length)
+        # if pagination is disabled ("bPaginate": false)
+        if limit == -1:
+            return qs
+        start = int(request.REQUEST.get('iDisplayStart', 0))
+        offset = start + limit
+        return start, offset
 
     def paging(self, qs):
         """ Paging
         """
-        limit = min(int(self.request.REQUEST.get('iDisplayLength', 10)), self.max_display_length)
-        # if pagination is disabled ("bPaginate": false)
-        if limit == -1:
-            return qs
-        start = int(self.request.REQUEST.get('iDisplayStart', 0))
-        offset = start + limit
+        start, offset = self.build_paging(self.request, self.max_display_length)
         return qs[start:offset]
 
     # TO BE OVERRIDEN
