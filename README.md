@@ -152,3 +152,46 @@ Example JS:
                     item.modified.strftime("%Y-%m-%d %H:%M:%S")
                 ])
             return json_data
+
+Advanced usage
+==============
+
+If you want to handle non-queryset datatables with this library, you can overwrite `paging` and `order_by` on `BaseDatatableView`, like so
+
+
+```python
+class CaregiverListJsonView(BaseDatatableView, CaregiverListView):
+    """Datatables JSON for caregivers list page; requires django-datatables-view"""
+
+    def ordering(self, qs):
+        """Handle programmatic ordering for last_screened_on and is_careguard_enabled."""
+        if not self.is_es_enabled:
+            return super(CaregiverListJsonView, self).ordering(qs)
+
+        order = self.build_order_by(self.request, self.get_order_columns())
+        new_order = []
+        self.order_es_columns = []  # split off for programmatic ordering
+        for sdir, sortcol in order:
+            if sortcol in ('is_careguard_enabled', 'last_screened_on'):
+                self.order_es_columns.append((sdir, sortcol))
+            else:
+                new_order.append((sdir, sortcol))
+
+        if new_order:
+            return qs.order_by(*[''.join(order_by) for order_by in new_order])
+        return qs
+
+    def paging(self, qs):
+        """Overwrite to handle programmatic pagination for ES columns."""
+        if not self.is_es_enabled or not self.order_es_columns:
+            return super(CaregiverListJsonView, self).paging(qs)
+
+        start, offset = self.build_paging(self.request, self.max_display_length)
+
+        qs = self.add_employment_screening_to_qs(qs)
+        qs = self.sort_qs_with_employment_screening(qs)
+        qs = self.filter_qs_with_employment_screening(qs)
+        self.total_display_records = len(qs)
+
+        return qs[start:offset]
+```
