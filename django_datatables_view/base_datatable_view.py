@@ -58,9 +58,6 @@ class BaseDatatableView(JSONResponseView):
     @staticmethod
     def build_paging(request, max_length):
         limit = min(int(request.REQUEST.get('iDisplayLength', 10)), max_length)
-        # if pagination is disabled ("bPaginate": false)
-        if limit == -1:
-            return qs
         start = int(request.REQUEST.get('iDisplayStart', 0))
         offset = start + limit
         return start, offset
@@ -68,6 +65,10 @@ class BaseDatatableView(JSONResponseView):
     def paging(self, qs):
         """ Paging
         """
+        limit = min(int(self.request.REQUEST.get('iDisplayLength', 10)), self.max_display_length)
+        # if pagination is disabled ("bPaginate": false)
+        if limit == -1:
+            return qs
         start, offset = self.build_paging(self.request, self.max_display_length)
         return qs[start:offset]
 
